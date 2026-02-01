@@ -1,0 +1,77 @@
+Description: <short summary of the patch>
+ TODO: Put a short summary on the line above and replace this paragraph
+ with a longer explanation of this change. Complete the meta-information
+ with other relevant fields (see below for details). To make it easier, the
+ information below has been extracted from the changelog. Adjust it or drop
+ it.
+ .
+ nano (8.6-1) unstable; urgency=medium
+ .
+   * The "Awdah Hathaleen" release.
+   * New upstream release.
+   * Update lintian overrides.
+Author: Jordi Mallach <jordi@debian.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout https://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: (upstream|backport|vendor|other), (<patch-url>|commit:<commit-id>)
+Bug: <upstream-bugtracker-url>
+Bug-Debian: https://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: (no|not-needed|<patch-forwarded-url>)
+Applied-Upstream: <version>, (<commit-url>|commit:<commid-id>)
+Reviewed-By: <name and email of someone who approved/reviewed the patch>
+Last-Update: 2025-11-09
+
+--- nano-8.6.orig/src/rcfile.c
++++ nano-8.6/src/rcfile.c
+@@ -1023,7 +1023,7 @@ short closest_index_color(short red, sho
+ 		return (36 * level[red] + 6 * level[green] + level[blue] + 16);
+ }
+ 
+-#define COLORCOUNT  34
++#define COLORCOUNT  80
+ 
+ const char hues[COLORCOUNT][8] = { "red", "green", "blue",
+ 								   "yellow", "cyan", "magenta",
+@@ -1035,7 +1035,22 @@ const char hues[COLORCOUNT][8] = { "red"
+ 								   "sea", "sky", "slate",
+ 								   "teal", "sage", "brown",
+ 								   "ocher", "sand", "tawny",
+-								   "brick", "crimson",
++								   "brick", "crimson", "steel",
++                                                                  "aqua", "indigo", "olive",
++                                                                  "grape", "vert", "maroon",
++                                                                  "khaki", "silver", "amber",
++                                                                  "tan", "hotpink", "salmon",
++                                                                  "coral", "gold", "navajo",
++                                                                  "lemon", "canary", "cream",
++                                                                  "junebud", "camel", "violet",
++                                                                  "cocoa", "royal", "lilac",
++                                                                  "beige", "helio", "selago",
++                                                                  "spring", "alarm", "azul",
++                                                                  "banana", "scarlet", "carrot",
++                                                                  "scampi", "unicorn", "piggy",
++                                                                  "frog", "dodger", "frost",
++                                                                  "voodoo", "tomato", "forest",
++                                                                  "volt", "azure", "baby",
+ 								   "grey", "gray" };
+ 
+ short indices[COLORCOUNT] = { COLOR_RED, COLOR_GREEN, COLOR_BLUE,
+@@ -1043,7 +1058,12 @@ short indices[COLORCOUNT] = { COLOR_RED,
+ 							  COLOR_WHITE, COLOR_BLACK, THE_DEFAULT,
+ 							  204, 163, 134, 38, 48, 148, 215, 208, 137,
+ 							  175, 127, 98, 32, 111, 66, 35, 107, 100,
+-							  142, 186, 136, 166, 161,
++							  142, 186, 136, 166, 161, 31, 50, 54, 64,
++                                                         105, 118, 125, 143, 146, 178, 180, 206, 209,
++                                                         210, 220, 223, 227, 228, 230, 149, 137, 93,
++                                                         52, 26, 99, 138, 171, 225, 77, 160, 27,
++                                                         226, 196, 214, 60, 201, 219, 106, 69, 123,
++                                                         90, 202, 22, 190, 33, 153,
+ 							  COLOR_BLACK + 8, COLOR_BLACK + 8 };
+ 
+ /* Return the short value corresponding to the given color name, and set
