@@ -147,10 +147,10 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-    rm -fr "${WORKSPACE}"/build*/
-    rm -fr "${WORKSPACE}"/sysroot*/
+rm -fr "${WORKSPACE}"/build*/
+rm -fr "${WORKSPACE}"/sysroot*/
 
-    exit 0
+exit 0
 }
 
 # Function to clean
@@ -164,9 +164,9 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-    rm -fr "${WORKSPACE}"
+rm -fr "${WORKSPACE}"
 
-    exit 0
+exit 0
 }
 
 # Install basic build dependencies
