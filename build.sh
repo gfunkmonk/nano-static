@@ -395,7 +395,6 @@ build_for_arch() {
 
 # Parse command line arguments FIRST (before any output)
 TARGET_ARCH=""
-norm_arch=$(normalize_arch "$1")
 while [[ $# -gt 0 ]]; do
     case $1 in
         --nano-ver)
@@ -423,7 +422,7 @@ while [[ $# -gt 0 ]]; do
             usage
             ;;
         *)
-            TARGET_ARCH="$norm_arch"
+            TARGET_ARCH="$(normalize_arch "$1")"
             shift
             ;;
     esac
