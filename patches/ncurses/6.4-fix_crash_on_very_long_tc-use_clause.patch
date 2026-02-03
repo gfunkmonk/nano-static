@@ -1,0 +1,44 @@
+Author: Sven Joachim <svenjoac@gmx.de>
+Description: Fix tic crash on very long tc/use clauses
+ Correct limit-check when dumping tc/use clause via tic -I (report by
+ Gabriel Ravier), fix cherry-picked from the 20230121 upstream patchlevel.
+Bug: https://lists.gnu.org/archive/html/bug-ncurses/2023-01/msg00035.html
+Bug-Debian: https://bugs.debian.org/1029399
+Forwarded: not-needed
+Last-Update: 2023-01-22
+
+---
+ progs/dump_entry.c |   16 +++++++++++++---
+ 1 file changed, 13 insertions(+), 3 deletions(-)
+
+--- a/progs/dump_entry.c
++++ b/progs/dump_entry.c
+@@ -1651,15 +1651,25 @@ dump_entry(TERMTYPE2 *tterm,
+ }
+ 
+ void
+-dump_uses(const char *name, bool infodump)
++dump_uses(const char *value, bool infodump)
+ /* dump "use=" clauses in the appropriate format */
+ {
+-    char buffer[MAX_TERMINFO_LENGTH];
++    char buffer[MAX_TERMINFO_LENGTH + EXTRA_CAP];
++    int limit = (VALID_STRING(value) ? (int) strlen(value) : 0);
++    const char *cap = infodump ? "use" : "tc";
+ 
+     if (TcOutput())
+ 	trim_trailing();
++    if (limit == 0) {
++	_nc_warning("empty \"%s\" field", cap);
++	value = "";
++    } else if (limit > MAX_ALIAS) {
++	_nc_warning("\"%s\" field too long (%d), limit to %d",
++		    cap, limit, MAX_ALIAS);
++	limit = MAX_ALIAS;
++    }
+     _nc_SPRINTF(buffer, _nc_SLIMIT(sizeof(buffer))
+-		"%s%s", infodump ? "use=" : "tc=", name);
++		"%s=%.*s", cap, limit, value);
+     wrap_concat1(buffer);
+ }
+ 

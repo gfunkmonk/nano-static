@@ -1,0 +1,28 @@
+Origin: backport, https://github.com/mirror/ncurses/commit/fbd79f88d0de057053bd9658499f4e87c10ff2f4
+
+From fbd79f88d0de057053bd9658499f4e87c10ff2f4 Mon Sep 17 00:00:00 2001
+From: "Thomas E. Dickey" <dickey@invisible-island.net>
+Date: Sun, 23 Aug 2020 01:24:28 +0000
+Subject: [PATCH] ncurses 6.2 - patch 20200822
+
+ correct an off-by-one loop-limit in convert_strings function
+ (report by Yue Tai).
+
+Index: ncurses-6.2/ncurses/tinfo/read_entry.c
+===================================================================
+--- ncurses-6.2.orig/ncurses/tinfo/read_entry.c
++++ ncurses-6.2/ncurses/tinfo/read_entry.c
+@@ -173,11 +173,11 @@ convert_strings(char *buf, char **String
+ 
+ 	/* make sure all strings are NUL terminated */
+ 	if (VALID_STRING(Strings[i])) {
+-	    for (p = Strings[i]; p <= table + size; p++)
++	    for (p = Strings[i]; p < table + size; p++)
+ 		if (*p == '\0')
+ 		    break;
+ 	    /* if there is no NUL, ignore the string */
+-	    if (p > table + size)
++	    if (p >= table + size)
+ 		Strings[i] = ABSENT_STRING;
+ 	}
+     }

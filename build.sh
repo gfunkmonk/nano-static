@@ -126,7 +126,7 @@ usage() {
     echo ""
     echo -e "${CREAM}Examples:${NC}"
     echo -e "${BWHITE}  $0 mipsel${NC}                                     ${TEAL}# Build for mipsel with default versions${NC}"
-    echo -e "${BWHITE}  $0 aarch64 --nano-ver 8.7${NC}                     ${TEAL}# Build for aarch64 with nano 8.7${NC}"
+    echo -e "${BWHITE}  $0 --nano-ver 8.7 aarch64${NC}                     ${TEAL}# Build for aarch64 with nano 8.7${NC}"
     echo -e "${BWHITE}  $0 --ncurses-ver 6.1 --nano-ver 7.2${NC}           ${TEAL}# Build all archs with custom versions${NC}"
     echo -e "${BWHITE}  NANO_VERSION=8.2 NCURSES_VERSION=6.0 $0 armv7${NC} ${TEAL}# Use environment variables${NC}"
     echo ""
@@ -332,7 +332,7 @@ build_for_arch() {
 
     # Apply patches if they exist
     if [ -d "${PATCHES}/nano" ]; then
-        for patch in "${PATCHES}"/nano/*.patch; do
+        for patch in "${PATCHES}"/nano/nano-*.patch; do
             if [[ -f "$patch" ]]; then
                 echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
                 patch -sp1 <"${patch}" || {
@@ -341,6 +341,17 @@ build_for_arch() {
             fi
         done
     fi
+
+    if [ -d "${PATCHES}/nano" ] && [[ $(echo "${NANO_VERSION} < 8.0" | bc) == 1 ]]; then
+        for patch in "${PATCHES}"/nano/nano7-*.patch; do
+             if [[ -f "$patch" ]]; then
+                 echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
+                 patch -sp1 <"${patch}" || {
+                     echo -e "${LEMON}WARNING: Failed to apply patch ${patch##*/}${NC}" >&2
+                 }
+             fi
+         done
+     fi
 
     echo -e "\n"
     sleep 3
@@ -395,7 +406,6 @@ build_for_arch() {
 
 # Parse command line arguments FIRST (before any output)
 TARGET_ARCH=""
-norm_arch=$(normalize_arch "$1")
 while [[ $# -gt 0 ]]; do
     case $1 in
         --nano-ver)
@@ -423,7 +433,7 @@ while [[ $# -gt 0 ]]; do
             usage
             ;;
         *)
-            TARGET_ARCH="$norm_arch"
+            TARGET_ARCH="$(normalize_arch "$1")"
             shift
             ;;
     esac

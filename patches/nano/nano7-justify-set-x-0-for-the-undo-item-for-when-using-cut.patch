@@ -1,0 +1,41 @@
+From 24393c6563d466189554158f1bf21397504267fe Mon Sep 17 00:00:00 2001
+From: Benno Schulenberg <bensberg@telfort.nl>
+Date: Thu, 15 Feb 2024 16:53:49 +0100
+Subject: [PATCH 3/4] justify: set `x = 0` for the undo item, for when using
+ --cutfromcursor
+
+When --cutfromcursor is active, 'current_x' needs to be set to zero when
+doing a justification, so that the correct starting position gets stored
+in the undo item.  (Without --cutfromcursor, the value of 'current_x'
+does not matter.)
+
+This fixes https://savannah.gnu.org/bugs/?65317.
+The issue was indirectly reported by `correctmost`.
+
+Bug existed in this form since version 5.0, commit ae5a4ece.
+
+Between versions 4.0 and 5.0, nano would not eat a line but would
+instead crash when undoing a justification that was done with the
+cursor away from the left edge.
+---
+ src/text.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/text.c b/src/text.c
+index 34551fea..309e835b 100644
+--- a/src/text.c
++++ b/src/text.c
+@@ -1871,7 +1871,8 @@ void justify_text(bool whole_buffer)
+ #endif
+ 			refresh_needed = TRUE;
+ 			return;
+-		}
++		} else
++			openfile->current_x = 0;
+ 
+ 		/* Set the starting point of the paragraph. */
+ 		startline = openfile->current;
+-- 
+2.42.1
+
+
