@@ -150,7 +150,7 @@ echo "Removing build directory..."
 rm -fr "${WORKSPACE}"/build*/
 rm -fr "${WORKSPACE}"/sysroot*/
 
-exit 0
+return 0
 }
 
 # Function to clean
@@ -166,7 +166,7 @@ fi
 echo "Removing build directory..."
 rm -fr "${WORKSPACE}"
 
-exit 0
+return 0
 }
 
 # Install basic build dependencies
