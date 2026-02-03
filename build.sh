@@ -108,7 +108,7 @@ ARCHITECTURES=(
 
 # Function to display usage
 usage() {
-    echo -e "${CANARY}Usage: $0 [options] [architecture]${NC}"
+    echo -e "${CANARY}Usage: $0 [architecture] [options]${NC}"
     echo ""
     echo -e "${VIOLET}Options:${NC}"
     echo -e "  ${PINK}--nano-ver VERSION${NC}       ${SLATE}Set nano version (default: ${NANO_VERSION})${NC}"
@@ -126,7 +126,7 @@ usage() {
     echo ""
     echo -e "${CREAM}Examples:${NC}"
     echo -e "${BWHITE}  $0 mipsel${NC}                                     ${TEAL}# Build for mipsel with default versions${NC}"
-    echo -e "${BWHITE}  $0 --nano-ver 8.7 aarch64${NC}                     ${TEAL}# Build for aarch64 with nano 8.7${NC}"
+    echo -e "${BWHITE}  $0 aarch64 --nano-ver 8.7${NC}                     ${TEAL}# Build for aarch64 with nano 8.7${NC}"
     echo -e "${BWHITE}  $0 --ncurses-ver 6.1 --nano-ver 7.2${NC}           ${TEAL}# Build all archs with custom versions${NC}"
     echo -e "${BWHITE}  NANO_VERSION=8.2 NCURSES_VERSION=6.0 $0 armv7${NC} ${TEAL}# Use environment variables${NC}"
     echo ""
@@ -150,7 +150,7 @@ echo "Removing build directory..."
 rm -fr "${WORKSPACE}"/build*/
 rm -fr "${WORKSPACE}"/sysroot*/
 
-exit 1
+return 0
 }
 
 # Function to clean
@@ -166,7 +166,7 @@ fi
 echo "Removing build directory..."
 rm -fr "${WORKSPACE}"
 
-exit 1
+return 0
 }
 
 # Install basic build dependencies
@@ -199,7 +199,7 @@ setup_toolchain() {
 
     local archive="${musl_name}.tar.xz"
     if [ ! -f "${archive}" ]; then
-        wget -q --show-progress "${MUSL_CC_BASE}/${archive}" || {
+        wget -q --show-progress --tries=3 --timeout=30 "${MUSL_CC_BASE}/${archive}" || {
             echo -e "${TOMATO}Error: Failed to download toolchain ${musl_name}${NC}"
             return 1
         }
@@ -255,7 +255,7 @@ build_for_arch() {
     cd "${BUILD_DIR}"
 
     if [ ! -f "ncurses-${NCURSES_VERSION}.tar.gz" ]; then
-        wget -q --show-progress "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" || {
+        wget -q --show-progress --tries=3 --timeout=30 "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" || {
             echo -e "${TOMATO}Error: Failed to download ncurses ${NCURSES_VERSION}${NC}"
             return 1
         }
@@ -267,7 +267,7 @@ build_for_arch() {
 
     # Apply patches if they exist
     if [ -d "${PATCHES}/ncurses" ]; then
-        for patch in "${PATCHES}"/ncurses/*.patch; do
+        for patch in "${PATCHES}"/ncurses/${NCURSES_VERSION}*.patch; do
             if [[ -f "$patch" ]]; then
                 echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
                 patch -sp1 --fuzz=8 <"${patch}" || {
@@ -295,7 +295,7 @@ build_for_arch() {
         --with-termlib \
         --disable-stripping \
         --disable-widec \
-        --with-fallbacks=linux,screen,vt100,xterm \
+        --with-fallbacks=linux,screen,vt100,xterm,xterm-256color \
         CC="${toolchain_prefix}"-gcc \
         STRIP="${toolchain_prefix}"-strip
 
@@ -319,7 +319,7 @@ build_for_arch() {
 
     local NANO_URL=$(get_nano_url "${NANO_VERSION}")
     if [ ! -f "nano-${NANO_VERSION}.tar.xz" ]; then
-        wget -q --show-progress "${NANO_URL}" || {
+        wget -q --show-progress --tries=3 --timeout=30 "${NANO_URL}" || {
             echo -e "${TOMATO}Error: Failed to download nano ${NANO_VERSION}${NC}"
             echo -e "${LEMON}Tried URL: ${NANO_URL}${NC}"
             return 1
@@ -354,7 +354,7 @@ build_for_arch() {
         --sysconfdir=/etc \
         --disable-nls \
         --disable-utf8 \
-        --disable-tiny \
+        --enable-tiny \
         --enable-nanorc \
         --enable-color \
         --enable-extra \
@@ -371,26 +371,26 @@ build_for_arch() {
     mkdir -p "${OUTPUT_DIR}"
 
     echo -e "${AQUA}Stripping binary...${NC}"
-    "${toolchain_prefix}"-strip src/nano -o "${OUTPUT_DIR}/nano-${display_name}"
+    "${toolchain_prefix}"-strip src/nano -o "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}"
 
     # Compress with UPX if available
     if command -v upx >/dev/null 2>&1; then
         echo -e "${PEACH}Compressing with UPX...${NC}"
-        upx --ultra-brute "${OUTPUT_DIR}/nano-${display_name}" > /dev/null 2>&1 || {
+        upx --ultra-brute "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}" > /dev/null 2>&1 || {
             echo -e "${LEMON}UPX compression failed, continuing...${NC}"
         }
     fi
 
     echo -e "${MINT}✓ Build complete for ${display_name}!${NC}"
-    echo -e "${HELIOTROPE}Binary: ${OUTPUT_DIR}/nano-${display_name}${NC}"
+    echo -e "${HELIOTROPE}Binary: ${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}${NC}"
 
     # Display binary info
-    local file_info=$(file "${OUTPUT_DIR}/nano-${display_name}" | cut -d: -f2-)
-    local size_info=$(du -h "${OUTPUT_DIR}/nano-${display_name}" 2>/dev/null | cut -f1)
+    local file_info=$(file "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}" | cut -d: -f2-)
+    local size_info=$(du -h "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}" 2>/dev/null | cut -f1)
 
     echo -e "${NAVAJO}Type: ${file_info}${NC}"
     echo -e "${SKY}Size: ${size_info}${NC}"
-    echo -e "${CREAM} $(ls -lh "${OUTPUT_DIR}/nano-${display_name}")${NC}"
+    echo -e "${CREAM} $(ls -lh "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}")${NC}"
 }
 
 # Parse command line arguments FIRST (before any output)
