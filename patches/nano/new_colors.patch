@@ -33,7 +33,7 @@ Last-Update: 2025-11-09
  }
  
 -#define COLORCOUNT  34
-+#define COLORCOUNT  80
++#define COLORCOUNT  82
  
  const char hues[COLORCOUNT][8] = { "red", "green", "blue",
  								   "yellow", "cyan", "magenta",
@@ -57,7 +57,7 @@ Last-Update: 2025-11-09
 +                                                                  "scampi", "unicorn", "piggy",
 +                                                                  "frog", "dodger", "frost",
 +                                                                  "voodoo", "tomato", "forest",
-+                                                                  "volt", "azure", "baby",
++                                                                  "volt", "azure", "baby", "blood", "moss",
  								   "grey", "gray" };
  
  short indices[COLORCOUNT] = { COLOR_RED, COLOR_GREEN, COLOR_BLUE,
@@ -71,7 +71,7 @@ Last-Update: 2025-11-09
 +                                                         210, 220, 223, 227, 228, 230, 149, 137, 93,
 +                                                         52, 26, 99, 138, 171, 225, 77, 160, 27,
 +                                                         226, 196, 214, 60, 201, 219, 106, 69, 123,
-+                                                         90, 202, 22, 190, 33, 153,
++                                                         90, 202, 22, 190, 33, 153, 88, 101, 
  							  COLOR_BLACK + 8, COLOR_BLACK + 8 };
  
  /* Return the short value corresponding to the given color name, and set

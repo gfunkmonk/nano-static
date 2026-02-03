@@ -1,0 +1,27 @@
+--- a/misc/ncurses-config.in	2022-07-26 17:36:28.000000000 -0400
++++ b/misc/ncurses-config.in	2026-02-03 00:43:43.012605280 -0500
+@@ -41,7 +41,6 @@
+ 
+ bindir="@bindir@"
+ includedir="@includedir@"
+-libdir="@libdir@"
+ datarootdir="@datarootdir@"
+ datadir="@datadir@"
+ mandir="@mandir@"
+@@ -126,7 +125,7 @@
+ 				lib_first=yes
+ 				IFS_save="$IFS"
+ 				IFS='|'
+-				LIBDIRS="@LD_SEARCHPATH@"
++				LIBDIRS=""
+ 				for lib_check in $LIBDIRS
+ 				do
+ 					if [ -d "$lib_check" ]
+@@ -274,7 +273,6 @@
+ 		echo "$INCS"
+ 		;;
+ 	--libdir)
+-		echo "${libdir}"
+ 		;;
+ 	--mandir)
+ 		echo "${mandir}"

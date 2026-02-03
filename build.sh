@@ -6,12 +6,34 @@ set -e  # Exit on any error
 # Configuration
 WORKSPACE="${PWD}/build"
 PATCHES="${PWD}/patches"
-NCURSES_VERSION="${NCURSES_VERSION:-6.4}"
+MAIN="${PWD}"
+NCURSES_VERSION="${NCURSES_VERSION:-6.6}"
 NANO_VERSION="${NANO_VERSION:-8.7}"
-MUSL_CC_BASE="https://musl.cc"
+MUSL_CC_BASE="https://github.com/gfunkmonk/musl-cross/releases/download/02022026/"
 
 # Color definitions
 source ./colors.sh
+
+# Normalize architecture names
+normalize_arch() {
+    local raw_arch=$1
+    case "$raw_arch" in
+        arm64|armv8) echo "aarch64" ;;
+        armv6l) echo "armv6" ;;
+        armv7l) echo "armv7" ;;
+        i386|x32) echo "i686" ;;
+        openrisc) echo "or1k" ;;
+        ppc) echo "powerpc" ;;
+        ppcle) echo "powerpcle" ;;
+        ppc64) echo "powerpc64" ;;
+        ppc64le) echo "powerpc64le" ;;
+        risc|risc32) echo "riscv32" ;;
+        risc64) echo "riscv64" ;;
+        sh) echo "sh4" ;;
+        x86-64|amd64|x64) echo "x86_64" ;;
+        *) echo "$raw_arch" ;;
+    esac
+}
 
 # Get per-architecture default CFLAGS
 get_arch_cflags() {
@@ -23,8 +45,8 @@ get_arch_cflags() {
         armv7) echo "-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard" ;;
         i686) echo "-march=i686 -mtune=generic" ;;
         loongarch64) echo "-march=loongarch64" ;;
-        m68k) echo "-march=68020 -fomit-frame-pointer -ffreestanding" ;;
-        mips64) echo "-mips64 -mabi=64" ;;
+        m68k) echo "-march=68020 -ffreestanding" ;;
+        mips64) echo "-march=mips64 -mabi=64" ;;
         mips64el) echo "-mplt" ;;
         powerpc) echo "-mpowerpc -m32" ;;
         powerpcle) echo "-m32" ;;
@@ -41,7 +63,7 @@ get_arch_cflags() {
 get_nano_url() {
     local version=$1
     local major_version="${version%%.*}"
-    
+
     # Nano versions 7.x and 8.x are in different directories
     if [[ "$major_version" == "8" ]]; then
         echo "https://www.nano-editor.org/dist/v8/nano-${version}.tar.xz"
@@ -57,50 +79,108 @@ get_nano_url() {
 # Available architectures from musl.cc
 # Format: "display_name:toolchain_prefix:musl_cc_name"
 ARCHITECTURES=(
-    "mipsel:mipsel-linux-muslsf:mipsel-linux-muslsf-cross"
-    "mips:mips-linux-muslsf:mips-linux-muslsf-cross"
-    "arm:arm-linux-musleabi:arm-linux-musleabi-cross"
-    "armhf:arm-linux-musleabihf:arm-linux-musleabihf-cross"
-    "armv5:armv5l-linux-musleabi:armv5l-linux-musleabi-cross"
-    "armv6:armv6-linux-musleabihf:armv6-linux-musleabihf-cross"
-    "armv7:armv7l-linux-musleabihf:armv7l-linux-musleabihf-cross"
-    "aarch64:aarch64-linux-musl:aarch64-linux-musl-cross"
-    "x86_64:x86_64-linux-musl:x86_64-linux-musl-cross"
-    "i686:i686-linux-musl:i686-linux-musl-cross"
-    "powerpc:powerpc-linux-muslsf:powerpc-linux-muslsf-cross"
-    "powerpc64:powerpc64-linux-musl:powerpc64-linux-musl-cross"
-    "powerpcle:powerpcle-linux-muslsf:powerpcle-linux-muslsf-cross"
-    "powerpc64le:powerpc64le-linux-musl:powerpc64le-linux-musl-cross"
-    "riscv32:riscv32-linux-musl:riscv32-linux-musl-cross"
-    "riscv64:riscv64-linux-musl:riscv64-linux-musl-cross"
-    "s390x:s390x-linux-musl:s390x-linux-musl-cross"
+    #"arm:arm-unknown-linux-musleabi:arm-unknown-linux-musleabi"
+    #"armhf:arm-unknown-linux-musleabihf:arm-unknown-linux-musleabihf"
+    "armv5:armv5-unknown-linux-musleabi:armv5-unknown-linux-musleabi"
+    "armv6:armv6-unknown-linux-musleabihf:armv6-unknown-linux-musleabihf"
+    "armv7:armv7-unknown-linux-musleabihf:armv7-unknown-linux-musleabihf"
+    "aarch64:aarch64-unknown-linux-musl:aarch64-unknown-linux-musl"
+    "i486:i486-unknown-linux-musl:i486-unknown-linux-musl"
+    "i586:i586-unknown-linux-musl:i586-unknown-linux-musl"
+    "i686:i686-unknown-linux-musl:i686-unknown-linux-musl"
+    "loongarch64:loongarch64-unknown-linux-musl:loongarch64-unknown-linux-musl"
+    "m68k:m68k-unknown-linux:m68k-unknown-linux"
+    "mips:mips-unknown-linux-muslsf:mips-unknown-linux-muslsf"
+    "mips64:mips64-unknown-linux-musl:mips64-unknown-linux-musl"
+    "mipsel:mipsel-unknown-linux-muslsf:mipsel-unknown-linux-muslsf"
+    "mips64el:mips64el-unknown-linux-musl:mips64el-unknown-linux-musl"
+    "or1k:or1k-unknown-linux-musl:or1k-unknown-linux-musl"
+    "powerpc:powerpc-unknown-linux-muslsf:powerpc-unknown-linux-muslsf"
+    "powerpc64:powerpc64-unknown-linux-musl:powerpc64-unknown-linux-musl"
+    "powerpcle:powerpcle-unknown-linux-muslsf:powerpcle-unknown-linux-muslsf"
+    "powerpc64le:powerpc64le-unknown-linux-musl:powerpc64le-unknown-linux-musl"
+    "riscv32:riscv32-unknown-linux-musl:riscv32-unknown-linux-musl"
+    "riscv64:riscv64-unknown-linux-musl:riscv64-unknown-linux-musl"
+    "s390x:s390x-ibm-linux-musl:s390x-ibm-linux-musl"
+    "sh4:sh4-multilib-linux-musl:sh4-multilib-linux-musl"
+    "x86_64:x86_64-unknown-linux-musl:x86_64-unknown-linux-musl"
 )
 
 # Function to display usage
 usage() {
-    echo -e "${CYAN}Usage: $0 [options] [architecture]${NC}"
+    echo -e "${CANARY}Usage: $0 [options] [architecture]${NC}"
     echo ""
     echo -e "${VIOLET}Options:${NC}"
-    echo -e "  ${PINK}--nano-version VERSION${NC}     Set nano version (default: ${NANO_VERSION})"
-    echo -e "  ${PINK}--ncurses-version VERSION${NC}  Set ncurses version (default: ${NCURSES_VERSION})"
-    echo -e "  ${PINK}-h, --help${NC}                 Show this help message"
+    echo -e "  ${PINK}--nano-ver VERSION${NC}       ${SLATE}Set nano version (default: ${NANO_VERSION})${NC}"
+    echo -e "  ${PINK}--ncurses-ver VERSION${NC}    ${SLATE}Set ncurses version (default: ${NCURSES_VERSION})${NC}"
+    echo -e "  ${PINK}--help, -h, help${NC}         ${SLATE}Show this help message${NC}"
+    echo -e "  ${PINK}--clean, clean${NC}           ${SLATE}Cleans build dir (except toolchains)${NC}"
+    echo -e "  ${PINK}--clean-all, clean-all${NC}   ${SLATE}Cleans build dir completely${NC}"
+    echo -e "  ${PINK}--inst-dep, inst-dep${NC}     ${SLATE}Tries to install build dependancies${NC}"
     echo ""
-    echo -e "${SLATE}Available architectures:${NC}"
+    echo -e "${LIGHTROYAL}Available architectures:${NC}"
     for arch in "${ARCHITECTURES[@]}"; do
         IFS=':' read -r display_name toolchain musl_name <<< "$arch"
-        echo -e "  ${GREEN}•${NC} $display_name"
+        echo -e "  ${BLUE}•${NC} ${ORANGE}$display_name${NC}"
     done
     echo ""
-    echo -e "${PURPLE}Examples:${NC}"
-    echo -e "  $0 mipsel                                     # Build for mipsel with default versions"
-    echo -e "  $0 --nano-version 8.7 aarch64                 # Build for aarch64 with nano 8.7"
-    echo -e "  $0 --ncurses-version 6.5 --nano-version 7.2   # Build all archs with custom versions"
-    echo -e "  NANO_VERSION=8.1 NCURSES_VERSION=6.3 $0 armv7 # Use environment variables"
+    echo -e "${CREAM}Examples:${NC}"
+    echo -e "${BWHITE}  $0 mipsel${NC}                                     ${TEAL}# Build for mipsel with default versions${NC}"
+    echo -e "${BWHITE}  $0 --nano-ver 8.7 aarch64${NC}                     ${TEAL}# Build for aarch64 with nano 8.7${NC}"
+    echo -e "${BWHITE}  $0 --ncurses-ver 6.1 --nano-ver 7.2${NC}           ${TEAL}# Build all archs with custom versions${NC}"
+    echo -e "${BWHITE}  NANO_VERSION=8.2 NCURSES_VERSION=6.0 $0 armv7${NC} ${TEAL}# Use environment variables${NC}"
     echo ""
-    echo -e "${CREAM}Environment Variables:${NC}"
-    echo -e "  ${TEAL}NANO_VERSION${NC}      Override default nano version"
-    echo -e "  ${TEAL}NCURSES_VERSION${NC}   Override default ncurses version"
+    echo -e "${NAVAJO}Environment Variables:${NC}"
+    echo -e "  ${BWHITE}NANO_VERSION${NC}      ${DKPURPLE}Override default nano version"
+    echo -e "  ${BWHITE}NCURSES_VERSION${NC}   ${DKPURPLE}Override default ncurses version"
     exit 1
+}
+
+# Function to clean
+cleanup() {
+read -p "Are you sure you want to continue? (y/n): " -n 1 confirmation
+echo "" # Add a newline after the single character input
+
+if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
+    echo "Operation cancelled."
+    exit 1
+fi
+
+echo "Removing build directory..."
+rm -fr ${WORKSPACE}/build*/
+rm -fr ${WORKSPACE}/sysroot*/
+
+exit 1
+}
+
+# Function to clean
+cleanall() {
+read -p "Are you sure you want to continue? (y/n): " -n 1 confirmation
+echo "" # Add a newline after the single character input
+
+if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
+    echo "Operation cancelled."
+    exit 1
+fi
+
+echo "Removing build directory..."
+rm -fr ${WORKSPACE}
+
+exit 1
+}
+
+# Install basic build dependencies
+installdep() {
+echo -e "${ORANGE}Installing build dependencies...${NC}"
+if command -v apt-get &> /dev/null; then
+    apt-get update > /dev/null 2>&1
+    apt-get install -y wget build-essential texinfo file > /dev/null 2>&1
+elif command -v yum &> /dev/null; then
+    yum install -y wget gcc make texinfo file > /dev/null 2>&1
+else
+    echo -e "${LEMON}Warning: Could not detect package manager.${NC}"
+fi
+exit 1
 }
 
 # Function to download and extract toolchain
@@ -117,7 +197,7 @@ setup_toolchain() {
     mkdir -p "${WORKSPACE}/toolchains"
     cd "${WORKSPACE}/toolchains"
 
-    local archive="${musl_name}.tgz"
+    local archive="${musl_name}.tar.xz"
     if [ ! -f "${archive}" ]; then
         wget -q --show-progress "${MUSL_CC_BASE}/${archive}" || {
             echo -e "${TOMATO}Error: Failed to download toolchain ${musl_name}${NC}"
@@ -126,7 +206,7 @@ setup_toolchain() {
     fi
 
     echo -e "${LAGOON}Extracting toolchain...${NC}"
-    tar -xzf "${archive}"
+    tar -xf "${archive}"
 
     echo -e "${KHAKI}Toolchain ready at ${toolchain_dir}${NC}"
     rm -f "${archive}"
@@ -148,7 +228,7 @@ build_for_arch() {
     local arch_cflags=$(get_arch_cflags "$norm_arch")
 
     # Set build-specific flags
-    local BUILD_CFLAGS="-Os -static -ffunction-sections -fdata-sections ${arch_cflags}"
+    local BUILD_CFLAGS="-Os -static -ffunction-sections -fdata-sections -fomit-frame-pointer ${arch_cflags}"
     local BUILD_LDFLAGS="-Wl,--gc-sections"
 
     # Setup toolchain
@@ -185,6 +265,21 @@ build_for_arch() {
     tar -xzf "ncurses-${NCURSES_VERSION}.tar.gz"
     cd "ncurses-${NCURSES_VERSION}"
 
+    # Apply patches if they exist
+    if [ -d "${PATCHES}/ncurses" ]; then
+        for patch in ${PATCHES}/ncurses/*.patch; do
+            if [[ -f "$patch" ]]; then
+                echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
+                patch -sp1 --fuzz=8 <"${patch}" || {
+                    echo -e "${LEMON}WARNING: Failed to apply patch ${patch##*/}${NC}" >&2
+                }
+            fi
+        done
+    fi
+
+    echo -e "\n"
+    sleep 3
+
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
     ./configure \
@@ -203,10 +298,7 @@ build_for_arch() {
         --with-fallbacks=linux,screen,vt100,xterm \
         CC=${toolchain_prefix}-gcc \
         STRIP=${toolchain_prefix}-strip
-        #> /dev/null 2>&1
 
-    #make -j$(nproc) > /dev/null 2>&1
-    #make install > /dev/null 2>&1
     make -j$(nproc) -s
     make install -s
 
@@ -252,7 +344,6 @@ build_for_arch() {
 
     echo -e "\n"
     sleep 3
-    echo -e "\n"
 
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
@@ -263,22 +354,20 @@ build_for_arch() {
         --sysconfdir=/etc \
         --disable-nls \
         --disable-utf8 \
-        --enable-tiny \
+        --disable-tiny \
         --enable-nanorc \
         --enable-color \
         --enable-extra \
-        --disable-justify \
         --enable-largefile \
+        --enable-libmagic \
         CC=${toolchain_prefix}-gcc \
         CPPFLAGS="-I${SYSROOT}/include/ncurses -I${SYSROOT}/include" \
         LDFLAGS="-L${SYSROOT}/lib ${BUILD_LDFLAGS}"
-        #> /dev/null 2>&1
 
-    #make -j$(nproc) > /dev/null 2>&1
     make -j$(nproc) -s
 
     # Strip and copy final binary
-    local OUTPUT_DIR="${WORKSPACE}/output"
+    export OUTPUT_DIR="${MAIN}/output"
     mkdir -p "${OUTPUT_DIR}"
 
     echo -e "${AQUA}Stripping binary...${NC}"
@@ -298,7 +387,7 @@ build_for_arch() {
     # Display binary info
     local file_info=$(file "${OUTPUT_DIR}/nano-${display_name}" | cut -d: -f2-)
     local size_info=$(du -h "${OUTPUT_DIR}/nano-${display_name}" 2>/dev/null | cut -f1)
-    
+
     echo -e "${NAVAJO}Type: ${file_info}${NC}"
     echo -e "${SKY}Size: ${size_info}${NC}"
     echo -e "${CREAM} $(ls -lh "${OUTPUT_DIR}/nano-${display_name}")${NC}"
@@ -306,25 +395,35 @@ build_for_arch() {
 
 # Parse command line arguments FIRST (before any output)
 TARGET_ARCH=""
+norm_arch=$(normalize_arch "$1")
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --nano-version)
+        --nano-ver)
             NANO_VERSION="$2"
             shift 2
             ;;
-        --ncurses-version)
+        --ncurses-ver)
             NCURSES_VERSION="$2"
             shift 2
             ;;
-        -h|--help)
+        -h|--help|help)
             usage
+            ;;
+        --clean|clean)
+            cleanup
+            ;;
+        --clean-all|clean-all)
+            cleanall
+            ;;
+        --inst-dep|inst-dep)
+            installdep
             ;;
         -*)
             echo -e "${TOMATO}Error: Unknown option $1${NC}"
             usage
             ;;
         *)
-            TARGET_ARCH="$1"
+            TARGET_ARCH="$norm_arch"
             shift
             ;;
     esac
@@ -334,18 +433,6 @@ done
 echo -e "${BWHITE}=== Cross-compilation build script for nano ===${NC}"
 echo -e "${MINT}Using musl.cc toolchains${NC}"
 echo ""
-
-# Install basic build dependencies (commented out - enable if needed)
- echo -e "${ORANGE}Installing build dependencies...${NC}"
- if command -v apt-get &> /dev/null; then
-     apt-get update > /dev/null 2>&1
-     apt-get install -y wget build-essential texinfo file > /dev/null 2>&1
- elif command -v yum &> /dev/null; then
-     yum install -y wget gcc make texinfo file > /dev/null 2>&1
- else
-     echo -e "${LEMON}Warning: Could not detect package manager.${NC}"
- fi
-
 
 # Display build configuration
 echo -e "${GOLD}Build Configuration:${NC}"
@@ -364,7 +451,7 @@ if [ -z "$TARGET_ARCH" ]; then
     echo -e "${VIOLET}No architecture specified. Building for all architectures...${NC}"
     FAILED=()
     SUCCEEDED=()
-    
+
     for arch in "${ARCHITECTURES[@]}"; do
         IFS=':' read -r display_name toolchain_prefix musl_name <<< "$arch"
         if build_for_arch "$display_name" "$toolchain_prefix" "$musl_name"; then
@@ -405,16 +492,16 @@ echo ""
 echo -e "${CORAL}==========================================${NC}"
 echo -e "${BWHITE}Build Summary${NC}"
 echo -e "${CORAL}==========================================${NC}"
-echo -e "${GOLD}Output directory: ${WORKSPACE}/output${NC}"
+echo -e "${GOLD}Output directory: ${OUTPUT_DIR}${NC}"
 echo ""
 echo -e "${PINK}Built binaries:${NC}"
-ls -lh "${WORKSPACE}/output/" 2>/dev/null || echo -e "${CRIMSON}No binaries found${NC}"
+ls -lh "${OUTPUT_DIR}" 2>/dev/null || echo -e "${CRIMSON}No binaries found${NC}"
 echo ""
-echo -e "${SELAGO}Installation instructions:${NC}"
-echo -e "  1. Copy the appropriate nano-[arch] binary to your device"
-echo -e "  2. ${BWHITE}chmod +x nano-[arch]${NC}"
-echo -e "  3. ${BWHITE}mv nano-[arch] /usr/local/bin/nano${NC}"
-echo -e "  4. ${BWHITE}export TERM=linux${NC}"
+echo -e "${PEACH}Installation instructions:${NC}"
+echo -e " ${CREAM}1.${NC} ${SELAGO}Copy the appropriate nano-[arch] binary to your device${NC}"
+echo -e "  ${CREAM}2.${NC} ${BWHITE}chmod +x nano-${RED}[arch]${NC}"
+echo -e "  ${CREAM}3.${NC} ${BWHITE}mv nano-${RED}[arch] ${BWHITE}/usr/local/bin/nano${NC}"
+echo -e "  ${CREAM}4.${NC} ${BWHITE}export TERM=linux${NC}"
 echo ""
 echo -e "${LEMON}If you get 'Error opening terminal':${NC}"
 echo -e "  ${BWHITE}export TERM=linux${NC}"
