@@ -147,10 +147,10 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-rm -fr "${WORKSPACE}"/build*/
-rm -fr "${WORKSPACE}"/sysroot*/
+    rm -fr "${WORKSPACE}"/build*/
+    rm -fr "${WORKSPACE}"/sysroot*/
 
-exit 1
+    exit 0
 }
 
 # Function to clean
@@ -164,9 +164,9 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-rm -fr "${WORKSPACE}"
+    rm -fr "${WORKSPACE}"
 
-exit 1
+    exit 0
 }
 
 # Install basic build dependencies
@@ -199,7 +199,7 @@ setup_toolchain() {
 
     local archive="${musl_name}.tar.xz"
     if [ ! -f "${archive}" ]; then
-        wget -q --show-progress "${MUSL_CC_BASE}/${archive}" || {
+        wget -q --show-progress --tries=3 --timeout=30 "${MUSL_CC_BASE}/${archive}" || {
             echo -e "${TOMATO}Error: Failed to download toolchain ${musl_name}${NC}"
             return 1
         }
@@ -255,7 +255,7 @@ build_for_arch() {
     cd "${BUILD_DIR}"
 
     if [ ! -f "ncurses-${NCURSES_VERSION}.tar.gz" ]; then
-        wget -q --show-progress "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" || {
+        wget -q --show-progress --tries=3 --timeout=30 "https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz" || {
             echo -e "${TOMATO}Error: Failed to download ncurses ${NCURSES_VERSION}${NC}"
             return 1
         }
@@ -278,7 +278,6 @@ build_for_arch() {
     fi
 
     echo -e "\n"
-    sleep 3
 
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
@@ -319,7 +318,7 @@ build_for_arch() {
 
     local NANO_URL=$(get_nano_url "${NANO_VERSION}")
     if [ ! -f "nano-${NANO_VERSION}.tar.xz" ]; then
-        wget -q --show-progress "${NANO_URL}" || {
+        wget -q --show-progress --tries=3 --timeout=30 "${NANO_URL}" || {
             echo -e "${TOMATO}Error: Failed to download nano ${NANO_VERSION}${NC}"
             echo -e "${LEMON}Tried URL: ${NANO_URL}${NC}"
             return 1
@@ -343,7 +342,6 @@ build_for_arch() {
     fi
 
     echo -e "\n"
-    sleep 3
 
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
