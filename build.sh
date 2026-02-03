@@ -9,7 +9,7 @@ PATCHES="${PWD}/patches"
 MAIN="${PWD}"
 NCURSES_VERSION="${NCURSES_VERSION:-6.6}"
 NANO_VERSION="${NANO_VERSION:-8.7}"
-MUSL_CC_BASE="https://github.com/gfunkmonk/musl-cross/releases/download/02022026/"
+MUSL_CC_BASE="https://github.com/gfunkmonk/musl-cross/releases/download/02032026/"
 
 # Color definitions
 source ./colors.sh
@@ -89,7 +89,7 @@ ARCHITECTURES=(
     "i586:i586-unknown-linux-musl:i586-unknown-linux-musl"
     "i686:i686-unknown-linux-musl:i686-unknown-linux-musl"
     "loongarch64:loongarch64-unknown-linux-musl:loongarch64-unknown-linux-musl"
-    "m68k:m68k-unknown-linux:m68k-unknown-linux"
+    "m68k:m68k-unknown-linux-musl:m68k-unknown-linux-musl"
     "mips:mips-unknown-linux-muslsf:mips-unknown-linux-muslsf"
     "mips64:mips64-unknown-linux-musl:mips64-unknown-linux-musl"
     "mipsel:mipsel-unknown-linux-muslsf:mipsel-unknown-linux-muslsf"
@@ -147,8 +147,8 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-rm -fr ${WORKSPACE}/build*/
-rm -fr ${WORKSPACE}/sysroot*/
+rm -fr "${WORKSPACE}"/build*/
+rm -fr "${WORKSPACE}"/sysroot*/
 
 exit 1
 }
@@ -164,7 +164,7 @@ if [[ "$confirmation" != 'y' && "$confirmation" != 'Y' ]]; then
 fi
 
 echo "Removing build directory..."
-rm -fr ${WORKSPACE}
+rm -fr "${WORKSPACE}"
 
 exit 1
 }
@@ -242,7 +242,7 @@ build_for_arch() {
     export PATH="${TOOLCHAIN_DIR}/bin:${PATH}"
 
     # Verify toolchain
-    if ! command -v ${toolchain_prefix}-gcc &> /dev/null; then
+    if ! command -v "${toolchain_prefix}"-gcc &> /dev/null; then
         echo -e "${TOMATO}Error: ${toolchain_prefix}-gcc not found in PATH${NC}"
         return 1
     fi
@@ -267,7 +267,7 @@ build_for_arch() {
 
     # Apply patches if they exist
     if [ -d "${PATCHES}/ncurses" ]; then
-        for patch in ${PATCHES}/ncurses/*.patch; do
+        for patch in "${PATCHES}"/ncurses/*.patch; do
             if [[ -f "$patch" ]]; then
                 echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
                 patch -sp1 --fuzz=8 <"${patch}" || {
@@ -283,7 +283,7 @@ build_for_arch() {
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
     ./configure \
-        --host=${toolchain_prefix} \
+        --host="${toolchain_prefix}" \
         --prefix="${SYSROOT}" \
         --enable-static \
         --disable-shared \
@@ -296,10 +296,10 @@ build_for_arch() {
         --disable-stripping \
         --disable-widec \
         --with-fallbacks=linux,screen,vt100,xterm \
-        CC=${toolchain_prefix}-gcc \
-        STRIP=${toolchain_prefix}-strip
+        CC="${toolchain_prefix}"-gcc \
+        STRIP="${toolchain_prefix}"-strip
 
-    make -j$(nproc) -s
+    make -j"$(nproc)" -s
     make install -s
 
     # Fix ncurses header structure
@@ -309,7 +309,7 @@ build_for_arch() {
         cd ncurses
         mkdir -p ncurses
         for f in *.h; do
-            [ -f "$f" ] && ln -sf ../$f ncurses/$f
+            [ -f "$f" ] && ln -sf ../"$f" ncurses/"$f"
         done
     fi
 
@@ -332,7 +332,7 @@ build_for_arch() {
 
     # Apply patches if they exist
     if [ -d "${PATCHES}/nano" ]; then
-        for patch in ${PATCHES}/nano/*.patch; do
+        for patch in "${PATCHES}"/nano/*.patch; do
             if [[ -f "$patch" ]]; then
                 echo -e "${JUNEBUD}Applying ${patch##*/}${NC}"
                 patch -sp1 <"${patch}" || {
@@ -349,7 +349,7 @@ build_for_arch() {
     LDFLAGS="${BUILD_LDFLAGS}" \
     PKG_CONFIG_PATH="${SYSROOT}/lib/pkgconfig" \
     ./configure \
-        --host=${toolchain_prefix} \
+        --host="${toolchain_prefix}" \
         --prefix=/usr/local \
         --sysconfdir=/etc \
         --disable-nls \
@@ -360,18 +360,18 @@ build_for_arch() {
         --enable-extra \
         --enable-largefile \
         --enable-libmagic \
-        CC=${toolchain_prefix}-gcc \
+        CC="${toolchain_prefix}"-gcc \
         CPPFLAGS="-I${SYSROOT}/include/ncurses -I${SYSROOT}/include" \
         LDFLAGS="-L${SYSROOT}/lib ${BUILD_LDFLAGS}"
 
-    make -j$(nproc) -s
+    make -j"$(nproc)" -s
 
     # Strip and copy final binary
     export OUTPUT_DIR="${MAIN}/output"
     mkdir -p "${OUTPUT_DIR}"
 
     echo -e "${AQUA}Stripping binary...${NC}"
-    ${toolchain_prefix}-strip src/nano -o "${OUTPUT_DIR}/nano-${display_name}"
+    "${toolchain_prefix}"-strip src/nano -o "${OUTPUT_DIR}/nano-${display_name}"
 
     # Compress with UPX if available
     if command -v upx >/dev/null 2>&1; then
