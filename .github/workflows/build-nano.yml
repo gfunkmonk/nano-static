@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     
     - name: Install dependencies
       run: |
@@ -55,11 +55,11 @@ jobs:
     
     - name: Build nano for ${{ matrix.arch }}
       run: |
-        chmod +x build_nano_enhanced.sh
+        chmod +x build.sh
         ./build.sh ${{ matrix.arch }}
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v6
       with:
         name: nano-${{ matrix.arch }}
         path: output/nano-*-${{ matrix.arch }}*
@@ -72,12 +72,12 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v7
       with:
         path: artifacts
     
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: artifacts/**/*
         draft: false
