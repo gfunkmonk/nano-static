@@ -67,7 +67,7 @@ get_arch_cflags() {
         riscv64) echo "-march=rv64gc -mabi=lp64d" ;;
         riscv32) echo "-ffreestanding -Wno-implicit-function-declaration -Wno-int-conversion" ;;
         s390x) echo "-march=z196 -mtune=z15" ;;
-        sh4) echo "-m4" ;;
+        sh4) echo "-fstack-protector-strong" ;;
         x86_64) echo "-march=x86-64 -mtune=generic" ;;
         *) echo "" ;;
     esac
