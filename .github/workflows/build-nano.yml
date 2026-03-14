@@ -1,0 +1,96 @@
+name: Build Nano Cross-Platform
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      nano_version:
+        description: 'Nano version to build'
+        required: true
+        default: '8.7.1'
+      ncurses_version:
+        description: 'Ncurses version to build'
+        required: true
+        default: '6.6'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: 
+          - aarch64
+          - armv5
+          - armv6
+          - armv7
+          - i686
+          - x86_64
+          - loongarch64
+          - m68k
+          - mips
+          - mipsel
+          - mips64
+          - mips64el
+          - powerpc
+          - powerpcle
+          - powerpc64
+          - powerpc64le
+          - riscv32
+          - riscv64
+          - s390x
+          - sh4
+      fail-fast: false
+    
+    steps:
+    - uses: actions/checkout@v6
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget build-essential texinfo file upx-ucl
+    
+    - name: Set versions
+      run: |
+        echo "NANO_VERSION=${{ github.event.inputs.nano_version || '8.7.1' }}" >> $GITHUB_ENV
+        echo "NCURSES_VERSION=${{ github.event.inputs.ncurses_version || '6.6' }}" >> $GITHUB_ENV
+    
+    - name: Build nano for ${{ matrix.arch }}
+      run: |
+        chmod +x build.sh
+        ./build.sh ${{ matrix.arch }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v6
+      with:
+        name: nano-${{ matrix.arch }}
+        path: output/nano-*-${{ matrix.arch }}*
+        retention-days: 30
+  
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v7
+      with:
+        path: artifacts
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "nano ${{ github.event.inputs.nano_version }}"
+        tag_name: nano-${{ github.event.inputs.nano_version }}
+        prerelease: false
+        draft: false
+        generate_release_notes: false
+        make_latest: true
+        files: artifacts/**/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

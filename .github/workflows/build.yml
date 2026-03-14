@@ -1,0 +1,29 @@
+name: build
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+          arch: [aarch64, armv5, armv6, armv7, i686, loongarch64, m68k, mips, mipsel, mips64, mips64el, or1k, powerpc, powerpcle, powerpc64, powerpc64le, riscv32, riscv64, s390x, sh4, x86_64 ] 
+    steps:
+    - uses: actions/checkout@v6
+    - name: install apt packages
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -qq build-essential gpg upx
+    - name: build
+      run: |
+        ./build.sh ${{matrix.arch}}
+    - name: rename artifact
+      run: |
+        # Find the actual nano binary
+        cd output
+        NANO_FILE=$(ls bash* | head -n 1)
+        mv -v "$NANO_FILE" nano-${{matrix.arch}}
+    - uses: actions/upload-artifact@v7
+      with:
+        name: nano-${{matrix.arch}}
+        path: output/nano-${{matrix.arch}}
