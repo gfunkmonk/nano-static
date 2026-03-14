@@ -645,6 +645,14 @@ build_for_arch() {
         return 1
     fi
 
+    # Use ccache as compiler wrapper if available
+    local CC_CMD="${toolchain_prefix}-gcc"
+    if command -v ccache &>/dev/null; then
+        CC_CMD="ccache ${toolchain_prefix}-gcc"
+        export CCACHE_DIR="${CCACHE_DIR:-${HOME}/.ccache}"
+        echo -e "${LIME}ccache enabled (dir: ${CCACHE_DIR})${NC}"
+    fi
+
     mkdir -p "${BUILD_DIR}"
     mkdir -p "${SYSROOT}"
 
@@ -684,7 +692,7 @@ build_for_arch() {
         --disable-stripping \
         --disable-widec \
         --with-fallbacks=linux,screen,vt100,xterm,xterm-256color \
-        CC="${toolchain_prefix}"-gcc \
+        CC="${CC_CMD}" \
         STRIP="${toolchain_prefix}"-strip
 
     make -j"$(get_parallel_jobs)" -s
@@ -744,7 +752,7 @@ build_for_arch() {
         --enable-extra \
         --enable-largefile \
         --enable-libmagic \
-        CC="${toolchain_prefix}"-gcc \
+        CC="${CC_CMD}" \
         CPPFLAGS="-I${SYSROOT}/include/ncurses -I${SYSROOT}/include" \
         LDFLAGS="-L${SYSROOT}/lib ${BUILD_LDFLAGS}"
 
