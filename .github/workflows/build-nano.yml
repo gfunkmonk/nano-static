@@ -49,22 +49,53 @@ jobs:
     
     steps:
     - uses: actions/checkout@v6
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y wget build-essential texinfo file upx-ucl
-    
+
     - name: Set versions
       run: |
         echo "NANO_VERSION=${{ github.event.inputs.nano_version || '8.7.1' }}" >> $GITHUB_ENV
         echo "NCURSES_VERSION=${{ github.event.inputs.ncurses_version || '6.6' }}" >> $GITHUB_ENV
-    
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget build-essential texinfo file upx-ucl ccache
+
+    - name: Cache toolchain
+      uses: actions/cache@v4
+      with:
+        path: build/toolchains
+        key: toolchain-${{ matrix.arch }}-v1
+
+    - name: Cache source downloads
+      uses: actions/cache@v4
+      with:
+        path: build/cache/downloads
+        key: downloads-nano-${{ env.NANO_VERSION }}-ncurses-${{ env.NCURSES_VERSION }}
+        restore-keys: |
+          downloads-nano-${{ env.NANO_VERSION }}-
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ccache-${{ matrix.arch }}-nano-${{ env.NANO_VERSION }}-ncurses-${{ env.NCURSES_VERSION }}
+        restore-keys: |
+          ccache-${{ matrix.arch }}-
+
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=500M
+        ccache --set-config=compression=true
+        ccache --zero-stats
+
     - name: Build nano for ${{ matrix.arch }}
       run: |
         chmod +x build.sh
         ./build.sh ${{ matrix.arch }}
-    
+
+    - name: Show ccache stats
+      run: ccache --show-stats
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v6
       with:
