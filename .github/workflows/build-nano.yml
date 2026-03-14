@@ -84,7 +84,7 @@ jobs:
 
     - name: Configure ccache
       run: |
-        ccache --set-config=max_size=500M
+        ccache --set-config=max_size=3000M
         ccache --set-config=compression=true
         ccache --zero-stats
 
