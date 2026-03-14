@@ -85,8 +85,8 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        name: "Continuous universal"
-        tag_name: continuous-universal
+        name: "nano-${{ github.event.inputs.nano_version || '8.7.1' }} with ncurses-${{ github.event.inputs.ncurses_version || '6.6' }}"
+        tag_name: "nano-${{ github.event.inputs.nano_version || '8.7.1' }}-ncurses-${{ github.event.inputs.ncurses_version || '6.6' }}"
         prerelease: false
         draft: false
         generate_release_notes: false
