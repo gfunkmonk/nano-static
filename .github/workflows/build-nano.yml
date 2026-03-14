@@ -85,5 +85,7 @@ jobs:
         files: artifacts/**/*
         draft: false
         prerelease: false
+        name: nano ${{ github.event.inputs.nano_version }} with ncurses ${{ github.event.inputs.ncurses_version }}
+        tag_name: nano-${{ github.event.inputs.nano_version }}_ncurses-${{ github.event.inputs.ncurses_version }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
