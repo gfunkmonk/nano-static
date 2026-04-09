@@ -203,7 +203,7 @@ installdep() {
     else
         echo -e "${LEMON}Warning: Could not detect package manager.${NC}"
     fi
-    exit 1
+    exit 0
 }
 
 # Parallel patch application
@@ -222,6 +222,7 @@ apply_patches_parallel() {
     while IFS= read -r -d '' patch; do
         patches+=("$patch")
     done < <(find "$patch_dir" -maxdepth 1 -name "$patch_pattern" -type f -print0 | sort -z)
+    shopt -u nullglob
 
     if [[ ${#patches[@]} -eq 0 ]]; then
         return 0
@@ -636,12 +637,14 @@ build_for_arch() {
     local SYSROOT="${WORKSPACE}/sysroot-${display_name}"
     local BUILD_DIR="${WORKSPACE}/build-${display_name}"
 
-    # Add toolchain to PATH
+    # Add toolchain to PATH (save and restore to avoid accumulation across sequential builds)
+    local ORIG_PATH="${PATH}"
     export PATH="${TOOLCHAIN_DIR}/bin:${PATH}"
 
     # Verify toolchain
     if ! command -v "${toolchain_prefix}"-gcc &> /dev/null; then
         echo -e "${TOMATO}Error: ${toolchain_prefix}-gcc not found in PATH${NC}"
+        export PATH="${ORIG_PATH}"
         return 1
     fi
 
@@ -674,7 +677,6 @@ build_for_arch() {
     echo -e "\n"
     apply_patches_parallel "$PATCHES/ncurses" "$BUILD_DIR/ncurses-${NCURSES_VERSION}" "${NCURSES_VERSION}*.patch"
     echo -e "\n"
-    sleep 3
 
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
@@ -729,13 +731,11 @@ build_for_arch() {
     apply_patches_parallel "$PATCHES/nano" "$BUILD_DIR/nano-${NANO_VERSION}" "nano-*.patch"
     echo -e "\n"
 
-    if [[ $(echo "${NANO_VERSION} < 8.0" | bc) == 1 ]]; then
+    if [[ "${NANO_VERSION%%.*}" -lt 8 ]]; then
        echo -e "\n"
        apply_patches_parallel "$PATCHES/nano" "$BUILD_DIR/nano-${NANO_VERSION}" "nano7-*.patch"
        echo -e "\n"
     fi
-
-    sleep 3
 
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
@@ -786,6 +786,9 @@ build_for_arch() {
     echo -e "${NAVAJO}Type: ${file_info}${NC}"
     echo -e "${SKY}Size: ${size_info}${NC}"
     echo -e "${CREAM} $(ls -lh "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}")${NC}"
+
+    # Restore PATH to avoid accumulation across sequential builds
+    export PATH="${ORIG_PATH}"
 }
 
 # ============================================================================
@@ -913,7 +916,7 @@ echo -e "  ${CYAN}Workspace:${NC}       ${BWHITE}${WORKSPACE}${NC}"
 echo -e "  ${CYAN}Caching:${NC}         ${BWHITE}$([ ${ENABLE_CACHE} -eq 1 ] && echo 'Enabled' || echo 'Disabled')${NC}"
 echo -e "  ${CYAN}Parallel builds:${NC} ${BWHITE}$([ ${PARALLEL_MODE} -eq 1 ] && echo "Enabled (${MAX_PARALLEL_BUILDS})" || echo 'Disabled')${NC}"
 echo -e "  ${CYAN}Number of jobs:${NC}  ${BWHITE}$([[ -n ${NJOBS:-} ]] && echo "Enabled (${NJOBS})" || echo 'Disabled')${NC}"
-echo -e "  ${CYAN}Extra CFLAGS:${NC}    ${BWHITE}${EXTRA_CFLAGS}${NC}"
+echo -e "  ${CYAN}Extra CFLAGS:${NC}    ${BWHITE}${EXTRA_CFLAGS:-}${NC}"
 echo ""
 
 mkdir -p "${WORKSPACE}"
