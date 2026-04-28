@@ -9,8 +9,8 @@ WORKSPACE="${PWD}/build"
 PATCHES="${PWD}/patches"
 MAIN="${PWD}"
 NCURSES_VERSION="${NCURSES_VERSION:-6.6}"
-NANO_VERSION="${NANO_VERSION:-8.7.1}"
-MUSL_CC_BASE="https://github.com/gfunkmonk/musl-cross/releases/download/ladder/"
+NANO_VERSION="${NANO_VERSION:-9.0}"
+MUSL_CC_BASE="https://github.com/gfunkmonk/musl-cross/releases/download/birthday/"
 OUTPUT_DIR="${MAIN}/output"
 CACHE_DIR="${WORKSPACE}/cache"
 ENABLE_CACHE="${ENABLE_CACHE:-1}"
@@ -79,7 +79,9 @@ get_nano_url() {
     local major_version="${version%%.*}"
 
     # Nano versions 7.x and 8.x are in different directories
-    if [[ "$major_version" == "8" ]]; then
+    if [[ "$major_version" == "9" ]]; then
+        echo "https://www.nano-editor.org/dist/v9/nano-${version}.tar.xz"
+    elif [[ "$major_version" == "8" ]]; then
         echo "https://www.nano-editor.org/dist/v8/nano-${version}.tar.xz"
     elif [[ "$major_version" == "7" ]]; then
         echo "https://www.nano-editor.org/dist/v7/nano-${version}.tar.xz"
@@ -638,20 +640,20 @@ build_for_arch() {
     local BUILD_DIR="${WORKSPACE}/build-${display_name}"
 
     # Add toolchain to PATH (save and restore to avoid accumulation across sequential builds)
-    local ORIG_PATH="${PATH}"
+    #local ORIG_PATH="${PATH}"
     export PATH="${TOOLCHAIN_DIR}/bin:${PATH}"
 
     # Verify toolchain
     if ! command -v "${toolchain_prefix}"-gcc &> /dev/null; then
         echo -e "${TOMATO}Error: ${toolchain_prefix}-gcc not found in PATH${NC}"
-        export PATH="${ORIG_PATH}"
+        #export PATH="${ORIG_PATH}"
         return 1
     fi
 
     # Use ccache as compiler wrapper if available
-    local CC_CMD="${toolchain_prefix}-gcc"
+    local CC_CMD="${TOOLCHAIN_DIR}/bin/${toolchain_prefix}-gcc"
     if command -v ccache &>/dev/null; then
-        CC_CMD="ccache ${toolchain_prefix}-gcc"
+        CC_CMD="ccache ${TOOLCHAIN_DIR}/bin/${toolchain_prefix}-gcc"
         export CCACHE_DIR="${CCACHE_DIR:-${HOME}/.ccache}"
         echo -e "${LIME}ccache enabled (dir: ${CCACHE_DIR})${NC}"
     fi
@@ -788,7 +790,7 @@ build_for_arch() {
     echo -e "${CREAM} $(ls -lh "${OUTPUT_DIR}/nano-${NANO_VERSION}-${display_name}")${NC}"
 
     # Restore PATH to avoid accumulation across sequential builds
-    export PATH="${ORIG_PATH}"
+    #export PATH="${ORIG_PATH}"
 }
 
 # ============================================================================
