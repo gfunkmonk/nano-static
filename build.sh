@@ -748,7 +748,7 @@ build_for_arch() {
         --sysconfdir=/etc \
         --disable-nls \
         --disable-utf8 \
-        --enable-tiny \
+        --disable-tiny \
         --enable-nanorc \
         --enable-color \
         --enable-extra \
