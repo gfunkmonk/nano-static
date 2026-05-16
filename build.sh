@@ -739,6 +739,9 @@ build_for_arch() {
        echo -e "\n"
     fi
 
+    echo -e "${CHARTREUSE}[${BWHITE}nano.c${CHARTREUSE}] ${BWHITE}Updating modified buffer prompt text${NC}"
+    sed -i "s|Save modified buffer|& (Y/N/^C)|" src/nano.c
+
     CFLAGS="${BUILD_CFLAGS}" \
     LDFLAGS="${BUILD_LDFLAGS}" \
     PKG_CONFIG_PATH="${SYSROOT}/lib/pkgconfig" \
